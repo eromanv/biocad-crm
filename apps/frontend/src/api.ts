@@ -126,14 +126,18 @@ export async function sendChatMessage(
   handlers: ChatSseHandlers,
   signal?: AbortSignal,
 ): Promise<void> {
+  const timeout = AbortSignal.timeout(120_000);
+  const linked = signal ? AbortSignal.any([signal, timeout]) : timeout;
+
   const res = await fetch(url("/api/chat"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "Cache-Control": "no-cache",
     },
     body: JSON.stringify({ message }),
-    signal,
+    signal: linked,
   });
 
   if (!res.ok) {
@@ -235,7 +239,7 @@ export async function sendChatMessage(
     if (!block.trim()) return;
     let eventName = "message";
     const dataLines: string[] = [];
-    for (const line of block.split("\n")) {
+    for (const line of block.split(/\r?\n/)) {
       if (line.startsWith("event:")) {
         eventName = line.slice(6).trim();
       } else if (line.startsWith("data:")) {
