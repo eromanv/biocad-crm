@@ -73,10 +73,12 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          # Remote login shell is often dash (sh); invoke bash explicitly.
+          # Remote default shell is often dash; --noprofile/--norc avoids PS1 + set -u.
           script: |
-            bash -euo pipefail -c '
+            bash --noprofile --norc -euo pipefail -c '
               cd "${{ secrets.DEPLOY_PATH }}"
+              test -d .git
+              test -f .env
               git fetch origin master
               git reset --hard origin/master
               docker compose -f docker-compose.prod.yml --env-file .env up --build -d
