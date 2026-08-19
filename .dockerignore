@@ -1,0 +1,11 @@
+.git
+.env
+**/__pycache__
+**/*.pyc
+**/.venv
+**/node_modules
+**/bun.lockb
+**/dist
+**/.pytest_cache
+**/.mypy_cache
+*.log

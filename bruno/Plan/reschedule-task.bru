@@ -1,0 +1,26 @@
+meta {
+  name: Reschedule task
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{backendUrl}}/api/tasks/:taskId/reschedule
+  body: json
+  auth: none
+}
+
+params {
+  taskId: 1
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "start": "2026-01-05",
+    "duration_days": 3
+  }
+}

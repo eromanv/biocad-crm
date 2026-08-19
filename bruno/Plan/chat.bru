@@ -1,0 +1,21 @@
+meta {
+  name: Chat SSE
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{backendUrl}}/api/chat
+  body: json
+  auth: none
+}
+
+headers {
+  Accept: text/event-stream
+}
+
+body:json {
+  {
+    "message": "Покажи краткий список задач на критическом пути"
+  }
+}

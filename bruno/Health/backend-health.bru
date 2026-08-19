@@ -1,0 +1,11 @@
+meta {
+  name: Backend health
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{backendUrl}}/health
+  body: none
+  auth: none
+}

@@ -1,0 +1,10 @@
+target-version = "py312"
+line-length = 100
+src = ["apps/backend", "apps/mcp", "packages/plan-core"]
+
+[lint]
+select = ["E", "F", "I", "UP", "W"]
+ignore = ["E501"]
+
+[lint.per-file-ignores]
+"packages/plan-core/alembic/**" = ["E402", "UP007", "UP035"]
