@@ -3,6 +3,7 @@ import { Gantt, ViewMode } from "gantt-task-react";
 import type { Task as GanttLibTask } from "gantt-task-react";
 import "gantt-task-react/dist/index.css";
 import type { Task } from "../types";
+import { RuTaskListHeader } from "./RuTaskListHeader";
 import {
   daysBetween,
   formatDate,
@@ -118,6 +119,8 @@ export function GanttChart({
           listCellWidth="160px"
           barFill={70}
           rowHeight={40}
+          locale="ru"
+          TaskListHeader={RuTaskListHeader}
           onClick={(task) => openTask(task.id)}
           onDoubleClick={(task) => openTask(task.id)}
           onDateChange={handleDateChange}
