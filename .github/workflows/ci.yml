@@ -73,11 +73,12 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          shell: bash
+          # Remote login shell is often dash (sh); invoke bash explicitly.
           script: |
-            set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-            git fetch origin master
-            git reset --hard origin/master
-            docker compose -f docker-compose.prod.yml --env-file .env up --build -d
-            docker compose -f docker-compose.prod.yml --env-file .env ps
+            bash -euo pipefail -c '
+              cd "${{ secrets.DEPLOY_PATH }}"
+              git fetch origin master
+              git reset --hard origin/master
+              docker compose -f docker-compose.prod.yml --env-file .env up --build -d
+              docker compose -f docker-compose.prod.yml --env-file .env ps
+            '
