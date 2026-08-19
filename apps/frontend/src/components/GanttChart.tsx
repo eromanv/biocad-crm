@@ -5,7 +5,6 @@ import "gantt-task-react/dist/index.css";
 import type { Task } from "../types";
 import {
   daysBetween,
-  scheduleKey,
   toDateOnlyIso,
   toGanttTasks,
 } from "../lib/gantt";
@@ -38,7 +37,13 @@ export function GanttChart({
 }: GanttChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const ganttTasks = useMemo(() => toGanttTasks(tasks), [tasks]);
-  const chartKey = useMemo(() => scheduleKey(tasks), [tasks]);
+  const [localTasks, setLocalTasks] = useState(ganttTasks);
+  // Update local tasks when source data changes, but not during drag
+  const prevGanttTasks = useRef(ganttTasks);
+  if (prevGanttTasks.current !== ganttTasks) {
+    prevGanttTasks.current = ganttTasks;
+    setLocalTasks(ganttTasks);
+  }
   const suppressClickUntil = useRef(0);
 
   const columnWidth =
@@ -62,15 +67,20 @@ export function GanttChart({
 
   const handleDateChange = async (moved: GanttLibTask): Promise<boolean> => {
     if (busy) return false;
-    // Suppress before await: click from mouseup can arrive while request runs
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
+    // Optimistically update local tasks so library doesn't remount
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === moved.id ? { ...t, start: moved.start, end: moved.end } : t)),
+    );
     const duration = Math.max(1, daysBetween(moved.start, moved.end));
     const start = toDateOnlyIso(moved.start);
     try {
       await onReschedule(moved.id, start, duration);
       suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
-      return false;
+      return true;
     } catch {
+      // Revert on error
+      setLocalTasks(ganttTasks);
       suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
       return false;
     }
@@ -101,8 +111,7 @@ export function GanttChart({
       </div>
       <div className={`gantt-scroll${busy ? " is-busy" : ""}`}>
         <Gantt
-          key={chartKey}
-          tasks={ganttTasks}
+          tasks={localTasks}
           viewMode={viewMode}
           columnWidth={columnWidth}
           listCellWidth="160px"
