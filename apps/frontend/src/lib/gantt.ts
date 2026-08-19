@@ -26,7 +26,7 @@ export function toGanttTasks(tasks: Task[]): GanttLibTask[] {
       name: t.name,
       start,
       end,
-      progress: t.is_critical ? 100 : 0,
+      progress: 0,
       type: "task" as const,
       dependencies: t.predecessor_ids,
       styles: t.is_critical

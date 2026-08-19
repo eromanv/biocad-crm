@@ -175,6 +175,14 @@ class PlanRepository:
         else:
             base = plan.project_start
 
+        # Dependency constraint:
+        # tasks can not start before all predecessors finish (finish is inclusive, so +1 day).
+        if new_start < base:
+            raise ScheduleError(
+                "Нельзя поставить задачу раньше окончания предшественников. "
+                f"Минимальная дата начала: {base.isoformat()}."
+            )
+
         lag_days = max(0, (new_start - base).days)
         updated = [
             t.model_copy(update={"lag_days": lag_days, "duration_days": duration_days})

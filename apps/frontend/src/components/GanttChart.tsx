@@ -3,9 +3,10 @@ import { Gantt, ViewMode } from "gantt-task-react";
 import type { Task as GanttLibTask } from "gantt-task-react";
 import "gantt-task-react/dist/index.css";
 import type { Task } from "../types";
+import { RuTaskListHeader } from "./RuTaskListHeader";
 import {
   daysBetween,
-  scheduleKey,
+  formatDate,
   toDateOnlyIso,
   toGanttTasks,
 } from "../lib/gantt";
@@ -38,7 +39,13 @@ export function GanttChart({
 }: GanttChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.Day);
   const ganttTasks = useMemo(() => toGanttTasks(tasks), [tasks]);
-  const chartKey = useMemo(() => scheduleKey(tasks), [tasks]);
+  const [localTasks, setLocalTasks] = useState(ganttTasks);
+  // Update local tasks when source data changes, but not during drag
+  const prevGanttTasks = useRef(ganttTasks);
+  if (prevGanttTasks.current !== ganttTasks) {
+    prevGanttTasks.current = ganttTasks;
+    setLocalTasks(ganttTasks);
+  }
   const suppressClickUntil = useRef(0);
 
   const columnWidth =
@@ -62,15 +69,20 @@ export function GanttChart({
 
   const handleDateChange = async (moved: GanttLibTask): Promise<boolean> => {
     if (busy) return false;
-    // Suppress before await: click from mouseup can arrive while request runs
     suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
+    // Optimistically update local tasks so library doesn't remount
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === moved.id ? { ...t, start: moved.start, end: moved.end } : t)),
+    );
     const duration = Math.max(1, daysBetween(moved.start, moved.end));
     const start = toDateOnlyIso(moved.start);
     try {
       await onReschedule(moved.id, start, duration);
       suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
-      return false;
+      return true;
     } catch {
+      // Revert on error
+      setLocalTasks(ganttTasks);
       suppressClickUntil.current = Date.now() + CLICK_SUPPRESS_MS;
       return false;
     }
@@ -101,18 +113,33 @@ export function GanttChart({
       </div>
       <div className={`gantt-scroll${busy ? " is-busy" : ""}`}>
         <Gantt
-          key={chartKey}
-          tasks={ganttTasks}
+          tasks={localTasks}
           viewMode={viewMode}
           columnWidth={columnWidth}
           listCellWidth="160px"
           barFill={70}
           rowHeight={40}
+          locale="ru"
+          TaskListHeader={RuTaskListHeader}
           onClick={(task) => openTask(task.id)}
           onDoubleClick={(task) => openTask(task.id)}
           onDateChange={handleDateChange}
           onProgressChange={() => false}
           onDelete={() => false}
+          TooltipContent={({ task }) => {
+            const days = daysBetween(task.start, task.end);
+            const suffix =
+              days === 1 ? "день" : days >= 2 && days <= 4 ? "дня" : "дней";
+            return (
+              <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", background: "#fff", borderRadius: "0.4rem", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                <b>{task.name}</b>
+                <br />
+                {formatDate(task.start)} — {formatDate(task.end)}
+                <br />
+                Длительность: {days} {suffix}
+              </div>
+            );
+          }}
         />
       </div>
     </div>
