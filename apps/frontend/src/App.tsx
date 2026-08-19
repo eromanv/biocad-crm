@@ -228,38 +228,6 @@ export default function App() {
         onReset={handleReset}
       />
 
-      {bannerText && (
-        <div
-          className={`banner ${bannerError ? "banner-error" : "banner-info"}`}
-          role={bannerError ? "alert" : "status"}
-        >
-          <span className="banner-text">{bannerText}</span>
-          {loadError && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() =>
-                withBusy("Загружаем план…", async () => {
-                  await refreshPlan();
-                  setLoadError(null);
-                })
-              }
-            >
-              Повторить
-            </button>
-          )}
-          {!loadError && statusTone === "error" && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setStatus(null)}
-            >
-              Скрыть
-            </button>
-          )}
-        </div>
-      )}
-
       <div className="workspace">
         <section className="gantt-area" aria-label="Диаграмма Ганта">
           {plan ? (
@@ -298,6 +266,38 @@ export default function App() {
           error={modalError}
           onClose={closeModal}
         />
+      )}
+
+      {bannerText && (
+        <div
+          className={`toast ${bannerError ? "toast-error" : "toast-info"}`}
+          role={bannerError ? "alert" : "status"}
+        >
+          <span className="toast-text">{bannerText}</span>
+          {loadError && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() =>
+                withBusy("Загружаем план…", async () => {
+                  await refreshPlan();
+                  setLoadError(null);
+                })
+              }
+            >
+              Повторить
+            </button>
+          )}
+          {!loadError && statusTone === "error" && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setStatus(null)}
+            >
+              Скрыть
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
