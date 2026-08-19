@@ -5,6 +5,7 @@ import "gantt-task-react/dist/index.css";
 import type { Task } from "../types";
 import {
   daysBetween,
+  formatDate,
   toDateOnlyIso,
   toGanttTasks,
 } from "../lib/gantt";
@@ -122,6 +123,20 @@ export function GanttChart({
           onDateChange={handleDateChange}
           onProgressChange={() => false}
           onDelete={() => false}
+          TooltipContent={({ task }) => {
+            const days = daysBetween(task.start, task.end);
+            const suffix =
+              days === 1 ? "день" : days >= 2 && days <= 4 ? "дня" : "дней";
+            return (
+              <div style={{ padding: "0.5rem 0.75rem", fontSize: "0.85rem", background: "#fff", borderRadius: "0.4rem", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+                <b>{task.name}</b>
+                <br />
+                {formatDate(task.start)} — {formatDate(task.end)}
+                <br />
+                Длительность: {days} {suffix}
+              </div>
+            );
+          }}
         />
       </div>
     </div>
