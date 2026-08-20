@@ -1,71 +1,100 @@
 # Roadmap to production
 
-MVP намеренно урезан: один пользователь, локальный compose, без auth. Ниже — пробелы и порядок закрытия перед выкладкой на VPS / прод.
+Сценарий задания закрыт и уже выкатывается на VPS: `docker-compose.prod.yml`, nginx на порту 80, CI на `develop`, деплой только с `master`. Это демо одного плана, не продукт: нет auth, TLS и изоляции пользователей. Ниже — что сделано сознательно урезанным, какие риски это даёт и в каком порядке закрывать.
 
-## Текущие ограничения MVP
+## Что уже есть (и почему этого мало)
+
+| Тема | Сейчас | Остаточный риск |
+|------|--------|-----------------|
+| Периметр сети | В prod наружу только nginx `:80` (`/`, `/api`, `/health`). Postgres и MCP без publish портов | Кто попал в docker-сеть, ходит в MCP без токена |
+| CORS | Allowlist из `CORS_ORIGINS`, не `*` | Без HTTPS cookie сессии нельзя пометить `Secure` |
+| Лимиты чата | Длина входа, число раундов tool-calling, длина ответа, rate limit по IP (`CHAT_RATE_LIMIT` / 60 с) | Лимит in-memory на процесс, не бюджет OpenRouter. Несколько воркеров / X-Forwarded-For его обходят |
+| MCP vs чат | У LLM allowlist тулов; `delete_task` в MCP есть, в чат не отдаётся | Прямой вызов MCP минует промпт |
+| Сессия чата | HttpOnly cookie, in-memory, TTL 30 мин, лимит числа сессий | Нет multi-worker, нет аудита, нет resume после рестарта |
+| Миграции | Alembic, `upgrade head` на старте backend и MCP | Схема версионируется, данные — нет (бэкапов нет) |
+| CI / деплой | lint, pytest (`plan-core`, backend), сборка prod-образов; на `master` — `git reset --hard` и `compose up --build` | Нет тегов образов, нет rollback, секрет OpenRouter живёт в `.env` на хосте |
+| Health | `/health` у backend и MCP, healthcheck'и Compose | Это liveness: backend не проверяет БД и MCP в JSON health |
+
+## Сознательные долги MVP
+
+Оставлено специально, чтобы не раздувать демо:
+
+- Один план на всю БД, без `project_id` / tenant.
+- Нет login. Кто знает URL — читает и меняет план, жжёт токены модели.
+- Календарные дни без выходных и праздников: CPM простой, сроки оптимистичные.
+- Нет undo: ошибочный NL-запрос откатывается только reset/повторным Excel.
+- HTTP без TLS (`CHAT_COOKIE_SECURE=false`) — иначе чат на голом HTTP не держит cookie.
+- Деплой пересобирает образы на сервере, а не тянет неизменяемый tag.
+
+## Ограничения, которые надо закрыть до боя
 
 | Область | Сейчас | Риск |
 |---------|--------|------|
-| Auth / роли | Нет | Любой с URL может читать/менять план и дергать чат |
-| Мультипользователи | Одна БД-таблица плана | Гонки, взаимные перезаписи |
-| Сессии чата | In-memory cookie, TTL 30 мин, без multi-worker | Нет аудита диалога и долговременного resume |
-| Аудит MCP/LLM | Нет лога tool-calls | Сложно расследовать «кто сдвинул задачи» |
-| Секреты | `.env` на хосте | Утечка ключа OpenRouter = деньги + доступ к модели |
-| MCP | Без токена (удобно для демо) | Любой в сети может вызывать тулы |
-| Лимиты LLM | Нет rate limit / budget | Стоимость и DoS через чат |
-| XSS / prompt injection | Текст чата и поля задач без жёсткой политики | Вредоносный Excel/чат → неожиданные tool-calls |
-| Бэкапы Postgres | Volume без политики | Потеря плана |
-| Наблюдаемость | Только `/health` | Нет метрик latency/ошибок LLM |
-| Календарь | Календарные дни без выходных | Нереалистичные сроки |
-| Undo | Нет | Ошибочный NL-запрос необратим (кроме reset/Excel) |
+| Auth / роли | Нет | Любой с URL меняет план и дергает чат |
+| Мультипользователи | Одна таблица плана | Гонки, взаимные перезаписи |
+| Аудит MCP/LLM | Нет лога tool-calls | Не восстановить, кто и каким промптом сдвинул задачи |
+| Секреты | `.env` на хосте | Утечка `OPENROUTER_API_KEY` = деньги + доступ к модели |
+| Prompt injection / XSS | Текст чата и поля задач без политики | Вредоносный Excel или сообщение → неожиданные tool-calls |
+| Бюджет LLM | Нет cap в долларах, только RPS-like лимит | Счёт OpenRouter не ограничен сверху |
+| Бэкапы Postgres | Volume без политики | Потеря единственного плана |
+| Наблюдаемость | Только `/health` | Нет latency LLM, обрывов SSE, 5xx |
+| Календарь | Без выходных | Нереалистичные сроки |
+| Undo | Нет | Ошибочный чат необратим |
+| TLS | Нет | Перехват сессии и ключей на сети |
 
 ## Порядок закрытия
 
-### 1. Секреты и периметр
+### 1. Периметр и секреты
 
-- Секреты только через secret store / compose secrets; ротация `OPENROUTER_API_KEY`.
-- Auth на MCP (Bearer / mTLS); отключить анонимный `/mcp` снаружи.
-- CORS строго по origin прод-фронта (уже не `*`).
+- TLS (Caddy/nginx) и `CHAT_COOKIE_SECURE=true`.
+- Секреты через secret store / compose secrets; ротация `OPENROUTER_API_KEY`.
+- Bearer (или mTLS) на MCP; даже во внутренней сети не анонимно.
+- CORS только origin прод-UI (уже allowlist — не расширять до `*`).
 
 ### 2. Идентичность и доступ
 
-- Login (OIDC / session cookie); роли: viewer / editor / admin.
-- Разделение планов по `project_id` / tenant; row-level доступ.
+- Login (OIDC или session cookie); роли viewer / editor / admin.
+- Shared password за reverse proxy — минимум для закрытого пилота.
+- Планы по `project_id` / tenant, row-level доступ.
 
-### 3. Надёжность данных
+### 3. Данные
 
-- ~~Миграции (Alembic)~~ — `packages/plan-core/alembic`, upgrade на старте backend/MCP. Осталось: бэкапы Postgres, restore-drill.
-- Оптимистичные версии плана или soft-lock при чате/import.
+- Бэкап volume Postgres и restore-drill.
+- Оптимистичная версия плана или soft-lock на время чата/import.
 - Аудит: кто вызвал tool, какой prompt, diff задач.
+- Горизонталь: сессии чата не in-memory, а Redis/БД.
 
-### 4. LLM safety & cost
+### 4. LLM: стоимость и safety
 
-- Rate limits, max tokens, budget alerts.
-- Allowlist тулов; подтверждение деструктивных действий (delete / full replace).
-- Санитизация пользовательского ввода и описаний задач в system prompt; отказ от исполнения «системных» инструкций из Excel.
+- Budget cap / alert в OpenRouter; rate limit не только in-process.
+- Подтверждение деструктивных действий (`delete_task`, полная замена плана).
+- Санитизация полей задач и сообщений в system prompt; отказ исполнять «системные» инструкции из Excel.
+- `delete_task` либо убрать с MCP, либо закрыть тем же auth, что и остальной периметр.
 
-### 5. UX / продукт
+### 5. Продукт
 
 - История чата в БД, undo последних N мутаций.
 - Календарь с выходными / праздниками.
-- Конфликты: показать diff при параллельном редактировании.
+- Конфликт: показать diff при параллельном редактировании.
 
 ### 6. Наблюдаемость и деплой
 
-- Structured logs, tracing (OpenTelemetry), дашборд ошибок 5xx / SSE disconnect.
-- Health + readiness (БД + MCP reachable).
-- VPS: тот же compose + reverse proxy (Caddy/Nginx) на 80/443, TLS; внутренние порты без смены схемы (8001/8101/5433 за proxy).
-- ~~CI: pytest plan-core, ruff, tsc, build prod-образов, деплой по SSH~~ — [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).
+- Structured logs, tracing (OpenTelemetry), отдельно ошибки LLM и обрывы SSE.
+- Readiness: БД доступна, MCP отвечает, не только процесс жив.
+- Образы с тегом (`:0.2.3`), деплой pull tag, документированный rollback на предыдущий tag. Сейчас `git reset --hard origin/master` + rebuild — для пилота терпимо, для боя нет.
 
-### 7. Compliance (по необходимости)
+### 7. Compliance (если появятся ПДн)
 
-- Хранение ПДн исполнителей, DPA с LLM-провайдером, регион данных.
+- Имена исполнителей, DPA с провайдером LLM, регион данных.
 
-## Критерии «можно на VPS для пилота»
+## Критерии «можно отдать пилоту на VPS»
 
-- [ ] Auth хотя бы basic / single shared password за reverse proxy
-- [ ] MCP не торчит в интернет без токена
-- [ ] Бэкап volume Postgres
-- [ ] Бюджет/лимит OpenRouter
-- [ ] CORS + HTTPS
-- [ ] Документированный rollback (`docker compose` предыдущего image tag)
+- [x] MCP не проксируется nginx наружу (осталось закрыть токеном внутри сети)
+- [x] CORS allowlist, не `*`
+- [x] Лимит частоты чата (не замена бюджету)
+- [ ] Auth хотя бы basic / shared password за reverse proxy
+- [ ] HTTPS + Secure cookie
+- [ ] Бэкап volume Postgres и проверенный restore
+- [ ] Бюджетный лимит OpenRouter
+- [ ] Rollback образом с тегом, не только `git reset --hard`
+- [ ] Аудит mutating tool-calls
