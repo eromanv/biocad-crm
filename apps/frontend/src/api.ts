@@ -136,6 +136,7 @@ export async function sendChatMessage(
       Accept: "text/event-stream",
       "Cache-Control": "no-cache",
     },
+    credentials: "include",
     body: JSON.stringify({ message }),
     signal: linked,
   });

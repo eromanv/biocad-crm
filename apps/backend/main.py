@@ -14,6 +14,14 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from chat_agent import chat_enabled, key_configured, run_chat
+from chat_session import (
+    CHAT_COOKIE_NAME,
+    CHAT_COOKIE_SECURE,
+    CHAT_SESSION_TTL,
+    ChatSessionStore,
+    new_session_id,
+    valid_session_id,
+)
 from plan_core.cpm import ScheduleError
 from plan_core.excel import export_plan_to_bytes, import_plan_from_bytes
 from plan_core.repo import PlanRepository, create_repository
@@ -28,6 +36,7 @@ CHAT_RATE_WINDOW = 60  # seconds
 
 _repo: PlanRepository | None = None
 _chat_timestamps: dict[str, list[float]] = {}
+_chat_sessions = ChatSessionStore()
 
 
 def repo() -> PlanRepository:
@@ -68,7 +77,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Biocad Backend", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Biocad Backend", version="0.2.0", lifespan=lifespan)
 _cors_origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:5174").split(",")
@@ -199,12 +208,20 @@ async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
 
     _check_rate_limit(_client_ip(request))
 
-    async def event_stream():
-        async for payload in run_chat(body.message, repo().get_plan):
-            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
-        yield 'data: {"type": "done"}\n\n'
+    raw_sid = request.cookies.get(CHAT_COOKIE_NAME)
+    if raw_sid and valid_session_id(raw_sid):
+        sid, new_cookie = raw_sid, False
+    else:
+        sid, new_cookie = new_session_id(), True
+    session = _chat_sessions.get_or_create(sid)
 
-    return StreamingResponse(
+    async def event_stream():
+        async with session.lock:
+            async for payload in run_chat(body.message, repo().get_plan, session):
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            yield 'data: {"type": "done"}\n\n'
+
+    response = StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
         headers={
@@ -213,3 +230,14 @@ async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
             "X-Accel-Buffering": "no",
         },
     )
+    if new_cookie:
+        response.set_cookie(
+            key=CHAT_COOKIE_NAME,
+            value=sid,
+            max_age=CHAT_SESSION_TTL,
+            httponly=True,
+            samesite="lax",
+            secure=CHAT_COOKIE_SECURE,
+            path="/",
+        )
+    return response
