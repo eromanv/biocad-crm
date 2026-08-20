@@ -82,12 +82,12 @@ wheels = [
 
 [[package]]
 name = "biocad"
-version = "0.2.0"
+version = "0.2.2"
 source = { virtual = "." }
 
 [[package]]
 name = "biocad-backend"
-version = "0.2.0"
+version = "0.2.2"
 source = { virtual = "apps/backend" }
 dependencies = [
     { name = "fastapi" },
@@ -121,7 +121,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "biocad-mcp"
-version = "0.2.0"
+version = "0.2.2"
 source = { virtual = "apps/mcp" }
 dependencies = [
     { name = "fastapi" },
@@ -535,7 +535,7 @@ wheels = [
 
 [[package]]
 name = "plan-core"
-version = "0.2.0"
+version = "0.2.2"
 source = { editable = "packages/plan-core" }
 dependencies = [
     { name = "alembic" },

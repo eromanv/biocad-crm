@@ -79,11 +79,33 @@ def test_pronoun_turn_keeps_new_task_as_focus():
         "сделай её исполнителем Елену и пусть она зависит от задачи Схема БД",
     )
     grounding = messages[1]["content"]
-    assert "last_task_id: 12" in grounding
+    assert "last_task_id: 12 («Тесты»)" in grounding
+    assert "не спрашивай какую задачу" in grounding
     assert "Схема БД" in grounding
     history_text = " ".join(m["content"] for m in messages[2:-1])
     assert "id 12" in history_text
     assert messages[-1]["content"].startswith("сделай её исполнителем")
+
+
+def test_duration_update_focus_grounds_reassign_pronoun():
+    session = ChatSession(last_task_id=2)
+    session.append("user", "сделай задачу Дизайн API на 1 день дольше")
+    session.append("assistant", "Дизайн API теперь длится 3 дня.")
+    messages = build_llm_messages(
+        build_seed_plan(),
+        session,
+        "назначь её исполнителем Елену",
+    )
+    grounding = messages[1]["content"]
+    assert "last_task_id: 2 («Дизайн API»)" in grounding
+    assert "выполняй СРАЗУ" in messages[0]["content"] or "не спрашивай какую задачу" in grounding
+
+
+def test_system_prompt_resumes_pending_action_after_clarification():
+    from chat_agent import SYSTEM_PROMPT
+
+    assert "отложенное действие" in SYSTEM_PROMPT
+    assert "Назначь её / эту задачу исполнителем" in SYSTEM_PROMPT
 
 
 def test_system_prompt_forbids_shifting_all_tasks_by_default():
@@ -91,6 +113,19 @@ def test_system_prompt_forbids_shifting_all_tasks_by_default():
 
     assert "Никогда не передавай все id плана" in SYSTEM_PROMPT
     assert "Уточни: какую задачу сдвинуть?" in SYSTEM_PROMPT
+
+
+def test_update_task_keeps_focus():
+    session = ChatSession(last_task_id=1)
+    mutated = apply_successful_tool(
+        "update_task",
+        {"task_id": 2, "duration_days": 3},
+        json.dumps(build_seed_plan().public_dict(), ensure_ascii=False),
+        prior_ids={t.id for t in build_seed_plan().tasks},
+        session=session,
+    )
+    assert mutated is True
+    assert session.last_task_id == 2
 
 
 def test_resolve_add_predecessors_focus_is_dependent_task():
