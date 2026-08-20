@@ -19,3 +19,10 @@ body:json {
     "message": "Покажи краткий список задач на критическом пути"
   }
 }
+
+docs {
+  SSE chat. The first response sets HttpOnly cookie biocad_chat_sid.
+  Later requests in this collection reuse it so pronouns resolve to last_task_id.
+  Duplicate names are not created until the user confirms.
+  Tool round limit is 5. Chat cannot delete tasks.
+}

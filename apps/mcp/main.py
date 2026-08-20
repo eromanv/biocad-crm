@@ -65,8 +65,9 @@ async def add_task(
     assignee: str = "",
     duration_days: int = 1,
     predecessor_ids: list[int] | None = None,
+    allow_duplicate: bool = False,
 ) -> str:
-    """Add a task and recalculate the CPM schedule."""
+    """Add a task and recalculate the CPM schedule. Duplicate names need allow_duplicate."""
     try:
         plan = await repo().add_task(
             name=name,
@@ -74,6 +75,7 @@ async def add_task(
             assignee=assignee,
             duration_days=duration_days,
             predecessor_ids=predecessor_ids or [],
+            allow_duplicate=allow_duplicate,
         )
         return _dump(plan)
     except (ScheduleError, ValueError) as exc:
@@ -97,6 +99,16 @@ async def update_task(
             assignee=assignee,
             duration_days=duration_days,
         )
+        return _dump(plan)
+    except (ScheduleError, ValueError) as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool()
+async def add_predecessors(task_id: int, predecessor_ids: list[int]) -> str:
+    """Add predecessors to a task without removing existing ones, then recalculate."""
+    try:
+        plan = await repo().add_predecessors(task_id, predecessor_ids)
         return _dump(plan)
     except (ScheduleError, ValueError) as exc:
         return json.dumps({"error": str(exc)})

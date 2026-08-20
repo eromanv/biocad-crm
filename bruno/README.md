@@ -17,4 +17,6 @@ Environment: `environments/local.bru` (`backendUrl`, `mcpUrl`).
 - `POST {{backendUrl}}/api/plan/reset`
 - `GET {{backendUrl}}/api/tasks/{id}`
 - `POST {{backendUrl}}/api/chat` — SSE (`token`, `plan_updated`, `error`); needs `OPENROUTER_API_KEY` and `CHAT_ENABLED=true`
-  - Guardrails: max input length, 3 tool rounds, rate limit (default 10/min), no `delete_task` from chat
+  - Cookie `biocad_chat_sid` (HttpOnly, SameSite=Lax) keeps last replies and `last_task_id` for 30 minutes
+  - Guardrails: max input length, 5 tool rounds, rate limit (default 10/min), no `delete_task` from chat
+  - Duplicate task names are rejected until the user confirms; `add_predecessors` appends dependencies
