@@ -23,7 +23,8 @@ docker compose up --build
 
 - Источник данных — PostgreSQL.
 - Пакет `packages/plan-core` содержит модели, расчёт CPM, импорт и экспорт Excel и репозиторий; используется backend и MCP.
-- Языковая модель не обращается к базе напрямую. Изменения плана выполняются только через инструменты MCP: `list_tasks`, `get_task`, `add_task`, `update_task`, `set_predecessors`, `shift_tasks`, `reassign_tasks`, `delete_task`, `recalc_schedule`.
+- Языковая модель не обращается к базе напрямую. Изменения плана выполняются только через инструменты MCP: `list_tasks`, `get_task`, `add_task`, `update_task`, `add_predecessors`, `set_predecessors`, `shift_tasks`, `reassign_tasks`, `delete_task`, `recalc_schedule`.
+- Чат держит краткую серверную сессию (HttpOnly cookie, in-memory, TTL 30 минут): последние реплики и `last_task_id`. Это не аудит и не хранилище на несколько процессов.
 - Ответы чата передаются потоком SSE: события `{type:"token"}`, `{type:"plan_updated", plan}`, `{type:"error"}`.
 
 ### HTTP API

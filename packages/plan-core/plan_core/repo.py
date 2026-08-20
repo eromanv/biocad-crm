@@ -14,6 +14,7 @@ from plan_core.db import (
     task_predecessors,
     tasks,
 )
+from plan_core.edits import duplicate_name_error, find_duplicate_tasks, merge_predecessor_ids
 from plan_core.models import Plan, Task
 from plan_core.seed import build_seed_plan
 
@@ -87,8 +88,13 @@ class PlanRepository:
         assignee: str = "",
         duration_days: int = 1,
         predecessor_ids: list[int] | None = None,
+        allow_duplicate: bool = False,
     ) -> Plan:
         plan = await self.get_plan()
+        if not allow_duplicate:
+            matches = find_duplicate_tasks(plan.tasks, name)
+            if matches:
+                raise ScheduleError(duplicate_name_error(name, matches))
         new_id = max((t.id for t in plan.tasks), default=0) + 1
         tasks_list = list(plan.tasks) + [
             Task(
@@ -152,6 +158,14 @@ class PlanRepository:
             for t in plan.tasks
         ]
         return await self.replace_plan(Plan(project_start=plan.project_start, tasks=updated))
+
+    async def add_predecessors(self, task_id: int, predecessor_ids: list[int]) -> Plan:
+        plan = await self.get_plan()
+        target = next((t for t in plan.tasks if t.id == task_id), None)
+        if target is None:
+            raise ScheduleError(f"Task {task_id} not found")
+        merged = merge_predecessor_ids(target.predecessor_ids, predecessor_ids)
+        return await self.set_predecessors(task_id, merged)
 
     async def reschedule_task(
         self,

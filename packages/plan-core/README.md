@@ -6,6 +6,7 @@ Shared domain package used by `apps/backend` and `apps/mcp`:
 - CPM schedule from `project_start` + predecessors
 - Excel import/export (columns: задача, описание, исполнитель, длительность, предшественники)
 - Postgres repository + seed plan
+- Duplicate-name guard on add and merge helper for predecessors
 - Alembic migrations (`alembic/`) — backend and MCP run `upgrade head` on startup
 
 ```bash
