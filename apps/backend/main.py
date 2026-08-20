@@ -77,7 +77,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Biocad Backend", version="0.2.2", lifespan=lifespan)
+app = FastAPI(title="Biocad Backend", version="0.2.3", lifespan=lifespan)
 _cors_origins = [
     origin.strip()
     for origin in os.getenv("CORS_ORIGINS", "http://localhost:5174").split(",")
