@@ -44,7 +44,12 @@ SYSTEM_PROMPT = """\
 - «A зависит от B» = добавь B в предшественники A через add_predecessors. Не меняй предшественников B.
 - Короткие команды вроде «добавь задачу X» — это управление планом. Вызови add_task. Недостающие поля: duration_days=1, пустые description/assignee.
 - Если add_task вернул ошибку про дубликат имени — НЕ создавай задачу. Спроси: изменить существующую или создать ещё одну. Дубликат только после явного согласия, с allow_duplicate=true.
-- После успешного add_task/update/reassign/add_predecessors держи фокус на этой задаче.
+- После успешного add_task/update/reassign/add_predecessors/shift_tasks держи фокус на этой задаче.
+
+Сдвиг (shift_tasks) — критично:
+- «Подвинь задачу / её / эту задачу на N дней» = сдвинь ТОЛЬКО одну задачу: last_task_id или явно названную. Никогда не передавай все id плана.
+- Сдвигать несколько задач можно только если пользователь перечислил их или явно сказал «все задачи» / «весь план».
+- Если непонятно, какую задачу сдвигать (нет имени и last_task_id=null) — НЕ вызывай тул. Уточни: какую задачу сдвинуть?
 
 Если запрос вне области — ответь:
 «Я могу только управлять проектным планом. Попробуйте: сдвинуть задачи, сменить исполнителя, добавить задачу.»
@@ -155,7 +160,11 @@ TOOLS: list[dict[str, Any]] = [
         "type": "function",
         "function": {
             "name": "shift_tasks",
-            "description": "Delay starts of tasks by N days (lag after predecessors).",
+            "description": (
+                "Delay starts of the given tasks by N days (lag after predecessors). "
+                "Pass only the task ids the user meant — usually a single id (last_task_id). "
+                "Never pass every task id unless the user explicitly asked to shift all tasks."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
