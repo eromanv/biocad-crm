@@ -2,6 +2,23 @@
 
 Система управления проектным планом: интерактивная диаграмма Ганта и чат на естественном языке. Стек — React, FastAPI, MCP-сервис и PostgreSQL. Сроки задач рассчитываются методом критического пути (CPM) от даты начала проекта и списка предшественников; даты старта в Excel не задаются.
 
+## Демо
+
+[Видео основного сценария](docs/demo.mp4) (~2.5 мин): загрузка Excel → массовые правки плана через чат на естественном языке → экспорт обратно в Excel.
+
+Файл в репозитории: [`docs/demo.mp4`](docs/demo.mp4).
+
+## Примеры Excel
+
+Каталог [`examples/`](examples/) — готовые файлы для импорта (`POST /api/plan/import`). Колонки совпадают с форматом задания: `задача`, `описание`, `исполнитель`, `длительность`, `предшественники`.
+
+| Файл | Назначение |
+|------|------------|
+| [`examples/sample-plan.xlsx`](examples/sample-plan.xlsx) | Основной тестовый план (разработка этого продукта). Предшественники заданы **именами задач**. |
+| [`examples/random-import.xlsx`](examples/random-import.xlsx) | Второй набор задач (другой домен). Предшественники заданы **номерами строк**. |
+
+Даты в файлах не заполняются: CPM считает старт и финиш от `project_start`. Подробности — в [`examples/README.md`](examples/README.md).
+
 ## Запуск локально
 
 ```bash
@@ -39,7 +56,7 @@ docker compose up --build
 | GET | `/api/tasks/{id}` | карточка задачи |
 | POST | `/api/chat` | запрос на естественном языке, ответ SSE |
 
-Коллекция запросов: [`bruno/`](bruno/). Пример файла импорта: [`examples/sample-plan.xlsx`](examples/sample-plan.xlsx).
+Коллекция запросов: [`bruno/`](bruno/). Примеры Excel: [`examples/`](examples/).
 
 ### MCP
 
@@ -78,10 +95,11 @@ apps/nginx         обратный прокси (production)
 packages/plan-core доменная логика и миграции Alembic
 uv.lock            фиксация зависимостей Python (uv workspace)
 bruno/             коллекция HTTP-запросов
-examples/          sample-plan.xlsx
-docs/              roadmap
+examples/          sample-plan.xlsx, random-import.xlsx
+docs/              roadmap, демо-видео основного сценария
 ```
 
 ## Документация
 
+- [docs/demo.mp4](docs/demo.mp4) — демо: импорт Excel → чат → экспорт
 - [docs/ROADMAP_TO_PRODUCTION.md](docs/ROADMAP_TO_PRODUCTION.md) — ограничения MVP и шаги к промышленной эксплуатации
