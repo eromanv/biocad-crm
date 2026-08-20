@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "../types";
 
 type ChatPanelProps = {
@@ -15,7 +15,7 @@ export function ChatPanel({ messages, streaming, onSend }: ChatPanelProps) {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streaming]);
 
-  const submit = (e: FormEvent) => {
+  const submit = (e: { preventDefault: () => void }) => {
     e.preventDefault();
     const text = draft.trim();
     if (!text || streaming) return;
@@ -76,9 +76,10 @@ export function ChatPanel({ messages, streaming, onSend }: ChatPanelProps) {
           }}
         />
         <button
-          type="submit"
+          type="button"
           className="btn btn-primary"
           disabled={streaming || !draft.trim()}
+          onClick={(e) => submit(e)}
         >
           {streaming ? "…" : "Отправить"}
         </button>

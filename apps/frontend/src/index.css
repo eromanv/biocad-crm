@@ -155,27 +155,33 @@ textarea {
   background: color-mix(in srgb, var(--line) 55%, transparent);
 }
 
-/* —— Toast (bottom notification) —— */
+/* —— Toast (bottom-left, never cover chat Send) —— */
 .toast {
   position: fixed;
   bottom: 1.5rem;
-  left: 50%;
-  translate: -50% 0;
-  z-index: 9000;
+  left: 1.25rem;
+  right: auto;
+  z-index: 40;
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  max-width: min(420px, calc(100vw - var(--chat-width) - 3rem));
   padding: 0.7rem 1.5rem;
   font-size: 0.9rem;
   font-weight: 550;
   border-radius: 0.6rem;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
   animation: toast-in 0.2s ease-out;
+  pointer-events: none;
 }
 
 @keyframes toast-in {
-  from { opacity: 0; translate: -50% 0.75rem; }
-  to   { opacity: 1; translate: -50% 0; }
+  from { opacity: 0; translate: 0 0.75rem; }
+  to   { opacity: 1; translate: 0 0; }
+}
+
+.toast .btn {
+  pointer-events: auto;
 }
 
 .toast-text {
@@ -452,6 +458,8 @@ textarea {
   padding: 0.85rem 1rem 1.05rem;
   border-top: 1px solid var(--line);
   background: #f8fafc;
+  position: relative;
+  z-index: 50;
 }
 
 .chat-composer textarea {

@@ -15,8 +15,12 @@ import { Toolbar } from "./components/Toolbar";
 import { humanizeUnknown } from "./lib/errors";
 import type { ChatMessage, Plan, Task } from "./types";
 
+/** Message ids. `crypto.randomUUID` is missing on insecure origins (http://IP). */
 function newId(): string {
-  return crypto.randomUUID();
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export default function App() {
@@ -67,6 +71,12 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!status || loadError) return;
+    const timer = window.setTimeout(() => setStatus(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [status, loadError]);
 
   const withBusy = async (label: string, fn: () => Promise<void>) => {
     setBusy(true);

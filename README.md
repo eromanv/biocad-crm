@@ -62,7 +62,7 @@ docker compose up --build
 
 1. Рекомендуется закрытый GitHub-репозиторий. Файл `.env` в систему контроля версий не включается.
 2. На сервере клонировать ветку `master`, скопировать `.env.example` в `.env`. Задать `OPENROUTER_API_KEY`, уникальные `POSTGRES_PASSWORD` и `DATABASE_URL`. Значения из примера предназначены только для локальной разработки. При необходимости указать `CORS_ORIGINS`.
-3. В GitHub → Settings → Secrets задать `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH` и `DEPLOY_SSH_FINGERPRINT` (отпечаток SSH-ключа хоста).
+3. В GitHub → Settings → Secrets задать `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`, `DEPLOY_PATH`.
 4. Ключ OpenRouter хранится только в `.env` на сервере, не в секретах GitHub. Compose читает этот файл при запуске.
 5. Обновление `develop` запускает [конвейер CI](.github/workflows/ci.yml) без выкладки. Обновление `master` дополнительно выполняет на сервере `git reset --hard origin/master` и `docker compose -f docker-compose.prod.yml --env-file .env up --build -d`.
 
