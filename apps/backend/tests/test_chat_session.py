@@ -53,6 +53,27 @@ def test_store_evicts_oldest_when_full():
     assert "c" * 16 in store
 
 
+def test_session_clear_resets_history_and_focus():
+    session = ChatSession(last_task_id=6)
+    session.append("user", "hi")
+    session.append("assistant", "ok")
+    session.clear()
+    assert list(session.messages) == []
+    assert session.last_task_id is None
+
+
+def test_store_clear_resets_existing_session():
+    store = ChatSessionStore(ttl_seconds=1000, max_sessions=10)
+    sid = "a" * 16
+    sess = store.get_or_create(sid)
+    sess.append("user", "hello")
+    sess.last_task_id = 3
+    assert store.clear(sid) is True
+    assert list(sess.messages) == []
+    assert sess.last_task_id is None
+    assert store.clear("missing-session-id!") is False
+
+
 @pytest.mark.asyncio
 async def test_session_lock_serializes_updates():
     session = ChatSession()

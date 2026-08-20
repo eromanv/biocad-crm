@@ -4,6 +4,8 @@ meta {
   seq: 2
 }
 
+# Clears chat session history for the request cookie (biocad_chat_sid) after a successful import.
+
 post {
   url: {{backendUrl}}/api/plan/import
   body: multipartForm

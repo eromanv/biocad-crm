@@ -97,6 +97,7 @@ export default function App() {
     withBusy("Загружаем Excel…", async () => {
       const next = await importPlan(file);
       setPlan(next);
+      setMessages([]);
       setLoadError(null);
     });
 
@@ -109,6 +110,7 @@ export default function App() {
     withBusy("Восстанавливаем демо-план…", async () => {
       const next = await resetPlan();
       setPlan(next);
+      setMessages([]);
       setLoadError(null);
     });
 

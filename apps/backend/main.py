@@ -121,6 +121,13 @@ def health() -> dict:
     }
 
 
+def _clear_chat_for_request(request: Request) -> None:
+    """Drop chat history when the plan is replaced (import / reset)."""
+    raw_sid = request.cookies.get(CHAT_COOKIE_NAME)
+    if raw_sid and valid_session_id(raw_sid):
+        _chat_sessions.clear(raw_sid)
+
+
 @app.get("/api/plan")
 async def get_plan() -> dict:
     plan = await repo().get_plan()
@@ -129,6 +136,7 @@ async def get_plan() -> dict:
 
 @app.post("/api/plan/import")
 async def import_plan(
+    request: Request,
     file: UploadFile = File(...),
     project_start: date | None = None,
 ) -> dict:
@@ -143,6 +151,7 @@ async def import_plan(
         start = project_start or current.project_start
         plan = import_plan_from_bytes(data, project_start=start)
         saved = await repo().replace_plan(plan)
+        _clear_chat_for_request(request)
         return saved.public_dict()
     except ScheduleError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -160,8 +169,9 @@ async def export_plan() -> Response:
 
 
 @app.post("/api/plan/reset")
-async def reset_plan() -> dict:
+async def reset_plan(request: Request) -> dict:
     plan = await repo().reset_to_seed()
+    _clear_chat_for_request(request)
     return plan.public_dict()
 
 
