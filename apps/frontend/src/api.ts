@@ -42,6 +42,7 @@ export async function importPlan(file: File): Promise<Plan> {
   const res = await fetch(url("/api/plan/import"), {
     method: "POST",
     body: form,
+    credentials: "include",
   });
   if (!res.ok) await parseError(res);
   return normalizePlan(await res.json());
@@ -63,7 +64,10 @@ export async function exportPlan(): Promise<void> {
 }
 
 export async function resetPlan(): Promise<Plan> {
-  const res = await fetch(url("/api/plan/reset"), { method: "POST" });
+  const res = await fetch(url("/api/plan/reset"), {
+    method: "POST",
+    credentials: "include",
+  });
   if (!res.ok) await parseError(res);
   return normalizePlan(await res.json());
 }

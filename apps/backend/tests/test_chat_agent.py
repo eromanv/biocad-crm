@@ -86,6 +86,13 @@ def test_pronoun_turn_keeps_new_task_as_focus():
     assert messages[-1]["content"].startswith("сделай её исполнителем")
 
 
+def test_system_prompt_forbids_shifting_all_tasks_by_default():
+    from chat_agent import SYSTEM_PROMPT
+
+    assert "Никогда не передавай все id плана" in SYSTEM_PROMPT
+    assert "Уточни: какую задачу сдвинуть?" in SYSTEM_PROMPT
+
+
 def test_resolve_add_predecessors_focus_is_dependent_task():
     result = json.dumps({"project_start": "2026-08-17", "tasks": []})
     assert (

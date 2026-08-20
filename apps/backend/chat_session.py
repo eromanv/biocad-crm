@@ -56,6 +56,10 @@ class ChatSession:
         while len(self.messages) > self.max_messages:
             self.messages.popleft()
 
+    def clear(self) -> None:
+        self.messages.clear()
+        self.last_task_id = None
+
     def history_before_last_user(self) -> list[dict[str, str]]:
         turns = list(self.messages)
         if turns and turns[-1].role == "user":
@@ -95,6 +99,15 @@ class ChatSessionStore:
             self._sessions[sid] = sess
         sess.last_seen = now
         return sess
+
+    def clear(self, sid: str) -> bool:
+        """Reset an existing session's history and focus. Returns True if found."""
+        sess = self._sessions.get(sid)
+        if sess is None:
+            return False
+        sess.clear()
+        sess.last_seen = float(self._time())
+        return True
 
     def __contains__(self, sid: object) -> bool:
         return sid in self._sessions
